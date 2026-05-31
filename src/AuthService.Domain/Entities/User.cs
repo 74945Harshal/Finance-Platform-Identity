@@ -16,6 +16,8 @@ namespace AuthService.Domain.Entities
         public bool IsActive { get; set; } = true;
 
         public DateTime CreatedAt { get; set; }
+        public int TokenVersion { get; set; } = 1;
+
 
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     }

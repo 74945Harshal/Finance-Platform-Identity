@@ -12,10 +12,12 @@ namespace AuthService.Application.Features.Auth.Commands.Logout
     public class LogoutCommandHandler : IRequestHandler<LogoutCommand, Unit>
     {
         private readonly IRefreshTokenRepository _refreshTokenRepository;
+        private readonly IUserRepository _userRepository;
 
-        public LogoutCommandHandler(IRefreshTokenRepository refreshTokenRepository)
+        public LogoutCommandHandler(IRefreshTokenRepository refreshTokenRepository, IUserRepository userRepository)
         {
             _refreshTokenRepository = refreshTokenRepository;
+            _userRepository = userRepository;
         }
 
         public async Task<Unit> Handle(LogoutCommand request, CancellationToken cancellationToken)
@@ -31,6 +33,12 @@ namespace AuthService.Application.Features.Auth.Commands.Logout
             if (existing != null && existing.RevokedAt == null)
             {
                 existing.RevokedAt = DateTime.UtcNow;
+                var user = await _userRepository.GetByIdAsync(existing.UserId);
+
+                if (user != null)
+                {
+                    user.TokenVersion++;
+                }
                 await _refreshTokenRepository.SaveChangesAsync();
             }
 

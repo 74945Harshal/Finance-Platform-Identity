@@ -11,6 +11,8 @@ using Serilog;
 using AuthService.Application;
 using AuthService.Infrastructure;
 using AuthService.Api.Middleware;
+using AuthService.Application.Interfaces.Repositories;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -81,7 +83,43 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "AuthService",
         ValidAudience = builder.Configuration["Jwt:Audience"] ?? "AuthService.Users",
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = TimeSpan.Zero // Set clock skew to zero so tokens expire exactly at expiry time
+        ClockSkew = TimeSpan.Zero
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var userRepository = context.HttpContext.RequestServices
+                .GetRequiredService<IUserRepository>();
+
+            var userIdClaim = context.Principal?
+                .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var tokenVersionClaim = context.Principal?
+                .FindFirst("tokenVersion")?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) ||
+                string.IsNullOrEmpty(tokenVersionClaim))
+            {
+                context.Fail("Invalid token.");
+                return;
+            }
+
+            var user = await userRepository.GetByIdAsync(
+                Guid.Parse(userIdClaim));
+
+            if (user == null)
+            {
+                context.Fail("User not found.");
+                return;
+            }
+
+            if (user.TokenVersion.ToString() != tokenVersionClaim)
+            {
+                context.Fail("Token revoked.");
+            }
+        }
     };
 });
 

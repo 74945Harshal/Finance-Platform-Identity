@@ -78,4 +78,4 @@ namespace AuthService.Application.Features.Auth.Commands.Login
             return new LoginResult(accessToken, refreshToken);
         }
     }
-}
+}   
