@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  auth-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: auth-db
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrong!Password123
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+
+  auth-api:
+    image: authservice-api
+    container_name: auth-api
+    build:
+      context: .
+      dockerfile: src/AuthService.Api/Dockerfile
+    ports:
+      - "5000:80"
+      - "5001:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Default=Server=auth-db;Database=AuthServiceDb;User Id=sa;Password=YourStrong!Password123;TrustServerCertificate=True;
+      - Jwt__Secret=SuperSecretKeyNeedsToBeLongForSecurityBestPractices!1234567890
+      - Jwt__Issuer=AuthService
+      - Jwt__Audience=AuthService.Users
+      - Jwt__ExpirationMinutes=15
+    depends_on:
+      - auth-db
+
+volumes:
+  mssql-data:
